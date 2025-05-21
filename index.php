@@ -5,12 +5,13 @@ if($_SERVER["REQUEST_METHOD"] === "POST"){
     $nom = htmlspecialchars($_POST["nom"]);
     $age = htmlspecialchars($_POST["age"]);
     $position = htmlspecialchars($_POST["position"]);
+    $id_equipe = htmlspecialchars($_POST["id_equipe"]);
 
     if($nom && $age && $position){
-        $sql = "insert into joueurs(nom, age, position) values(?, ?, ?)";
+        $sql = "insert into joueurs(nom, age, position, id_equipe) values(?, ?, ?, ?)";
         try {
             $stmt = $pdo->prepare($sql);
-            if($stmt->execute([$nom, $age, $position])){
+            if($stmt->execute([$nom, $age, $position, $id_equipe])){
                 $success = "joueur ajouté avec succès";
             }else {
                 $error = "erreur lors de l'ajout" ?? "";
@@ -24,13 +25,49 @@ if($_SERVER["REQUEST_METHOD"] === "POST"){
     }
 }
 
-// Récupérer la liste des joueurs
-$sql = "select * from joueurs";
+// Récupérer la liste des joueurs and leurs equipes
+$sql = "select joueurs.*, equipes.nom as nom_equipe from joueurs inner join equipes on joueurs.id_equipe = equipes.id_equipe ";
+
+$params = [];
+
+if(!empty($_GET['id_equipe'])){
+    $sql .= "where joueurs.id_equipe = ?";
+    $params[] = $_GET['id_equipe'];
+}
+
+if(!empty($_GET['age'])){
+    $sql .= "and joueurs.age = ?";
+    $params[] = $_GET['age'];
+}
+
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $joueurs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (\PDOException $e) {
+    die("Error : ".$e->getMessage());
+}
+
+// Récupérer la liste des equipes
+$sql = "select * from equipes";
 
 try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
-    $joueurs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $equipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (\PDOException $e) {
+    die("Error : ".$e->getMessage());
+}
+
+// Récupérer la liste des equipes
+$sql = "select distinct age from joueurs";
+
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+    $ages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    /* var_dump($ages);
+    die(); */
 } catch (\PDOException $e) {
     die("Error : ".$e->getMessage());
 }
@@ -54,28 +91,56 @@ $pdo=null;
         Nom: <input type="text" name="nom" required><br>
         Âge: <input type="number" name="age" required><br>
         Position: <input type="text" name="position" required><br>
+        <!-- Equipe id: <input type="text" name="id_equipe" required><br> -->
+        Equipe: <select name="id_equipe" id="id_equipe">
+            <!-- <option value="1">wac</option>
+            <option value="2">rca</option>
+            <option value="3">asfar</option> -->
+            <?php foreach($equipes as $equipe):?>
+                <option value="<?= $equipe['id_equipe'] ?>"><?= $equipe['nom'] ?></option>
+            <?php endforeach?>
+        </select><br>
         <input type="submit" name="ajouter_joueur" value="Ajouter joueur">
     </form>
     <?php echo !empty($error) ? $error : "" ?>
     <?php echo !empty($success) ? $success : "" ?>
     <h2>Liste des joueurs</h2>
+    <form method="get">
+        <select name="id_equipe" id="id_equipe" onchange="this.form.submit()">
+            <option value="">-- Toutes les équipes --</option>
+           <?php foreach($equipes as $equipe):?>
+                <option value="<?= $equipe['id_equipe'] ?>"
+                    <?= isset($_GET['id_equipe']) && $_GET['id_equipe'] == $equipe['id_equipe'] ? 'selected' : '' ?>><?= $equipe['nom'] ?></option>
+            <?php endforeach?>
+        </select>
+    
+        <select name="age" id="age" onchange="this.form.submit()">
+            <option value="">-- choisir age --</option>
+           <?php foreach($ages as $age):?>
+                <option value="<?= $age['age'] ?>"
+                    <?= isset($_GET['age']) && $_GET['age'] == $age['age'] ? 'selected' : '' ?>><?= $age['age'] ?></option>
+            <?php endforeach?>
+        </select>
+    </form>
     <table border="1">
         <tr>
             <th>Nom</th>
             <th>Âge</th>
             <th>Position</th>
+            <th>Equipe</th>
             <th>Actions</th>
         </tr>
         <?php foreach($joueurs as $joueur) :?>
             <tr>
-                <th><?= $joueur['nom'] ?></th>
-                <th><?= $joueur['age'] ?></th>
-                <th><?= $joueur['position'] ?></th>
-                <th>
+                <td><?= $joueur['nom'] ?></td>
+                <td><?= $joueur['age'] ?></td>
+                <td><?= $joueur['position'] ?></td>
+                <td><?= $joueur['nom_equipe'] ?></td>
+                <td>
                     <a href="modifier_joueur.php?id=<?= $joueur['id_joueur'] ?>">Modifier</a>
                     <a href="supprimer_joueur.php?id=<?= $joueur['id_joueur'] ?>"
                         onclick="return confirm('are you sur ?')">Supprimer</a>
-                </th>
+                </td>
             </tr>
         <?php endforeach?>
     </table>
