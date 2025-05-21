@@ -29,7 +29,7 @@ $sql = "select * from joueurs";
 
 try {
     $stmt = $pdo->prepare($sql);
-    $stmt->execute();
+    $stmt->execute([]);
     $joueurs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (\PDOException $e) {
     die("Error : ".$e->getMessage());
@@ -68,14 +68,14 @@ $pdo=null;
         </tr>
         <?php foreach($joueurs as $joueur) :?>
             <tr>
-                <th><?= $joueur['nom'] ?></th>
-                <th><?= $joueur['age'] ?></th>
-                <th><?= $joueur['position'] ?></th>
-                <th>
+                <td><?= $joueur['nom'] ?></td>
+                <td><?= $joueur['age'] ?></td>
+                <td><?= $joueur['position'] ?></td>
+                <td>
                     <a href="modifier_joueur.php?id=<?= $joueur['id_joueur'] ?>">Modifier</a>
                     <a href="supprimer_joueur.php?id=<?= $joueur['id_joueur'] ?>"
                         onclick="return confirm('are you sur ?')">Supprimer</a>
-                </th>
+                </td>
             </tr>
         <?php endforeach?>
     </table>
